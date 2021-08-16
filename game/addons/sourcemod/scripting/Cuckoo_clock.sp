@@ -10,7 +10,8 @@
 #define SND_hour	"k64t\\TalkingClock\\ru\\Kuranty-hour.mp3"
 #define SND_quota	"k64t\\TalkingClock\\ru\\Kuranty-quota.mp3"
 
-#include "color.inc"
+#tryinclude "color.inc"
+
 
 // ConVar
 Handle cvar_Period   = INVALID_HANDLE;
@@ -36,18 +37,18 @@ LoadTranslations("Cuckoo_clock.phrases");
 cvar_Period	= CreateConVar("Cuckoo_clock_Period","15",
 	"Number of minutes between clock talk "/*,_,true,5.0,true,60.0*/);
 #if defined DEBUG	
-RegConsoleCmd("talkclock",TestTalkClock);	
+RegConsoleCmd("TestCuckooClock",TestCuckooClock);	
 #endif 
-decl String:buffer[MAX_FILENAME_LENGHT];
+char buffer[MAX_FILENAME_LENGHT];
 Format(buffer, MAX_FILENAME_LENGHT, "sound\\%s",SND_hour);	
 AddFileToDownloadsTable(buffer);
 PrecacheSound(SND_hour,true);
 Format(buffer, MAX_FILENAME_LENGHT, "sound\\%s",SND_quota);	
 AddFileToDownloadsTable(buffer);
 PrecacheSound(SND_quota,true);
-AutoExecConfig(true, "TalkingClock");
+AutoExecConfig(true, "CuckooClock");
 #if defined DEBUG
-PrintToChatAll("TalkingClock_Period=%d",GetConVarInt(cvar_Period));
+PrintToChatAll("CuckooClock_Period=%d",GetConVarInt(cvar_Period));
 #endif 
 //-> не работает чтение и запись конфига
 Period=GetConVarInt(cvar_Period);
@@ -99,9 +100,8 @@ CreateTimer(float(FirstPeriod),FirstPeriodAdjustment);
 }
 #if defined DEBUG
 //***********************************************
-public OnMapStart(){
+public void OnMapStart(){
 //***********************************************
-
 DebugPrint("OnMapStart");
 }
 #endif 
@@ -122,9 +122,9 @@ TalkClock(GetTime());
 }
 #if defined DEBUG
 //*****************************************************************************
-public  Action:TestTalkClock(client, args){
+public  Action:TestCuckooClock(client, args){
 //*****************************************************************************
-DebugPrint("TestTalkClock");
+DebugPrint("TestCuckooClock");
 
 new CurentTime=GetTime();
 decl String:strtime[4];
