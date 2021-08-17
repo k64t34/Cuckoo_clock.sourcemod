@@ -1,5 +1,5 @@
-#define noDEBUG 1
-#define PLUGIN_VERSION "1.0"
+#define NoDEBUG 1
+#define PLUGIN_VERSION "1.1"
 #include "k64t"
 
 #define FATALERROR1 "it is impossible to calculate the 1st period"
@@ -114,8 +114,22 @@ void SayTime(){
 //*****************************************************************************
 int HMS[3];
 GetTimeHMS(HMS);
-if (HMS[2]==0) {PrecacheSound(SND_hour,true);EmitSoundToAll(SND_hour);}
-else /*if (HMS[2]==15 || HMS[2]==30 || HMS[2]==45 )*/ {PrecacheSound(SND_quota,true);EmitSoundToAll(SND_quota);}
+if (HMS[1]==0) 
+	{
+	#if defined DEBUG
+	DebugPrint("Sound %s",SND_hour);
+	#endif 	
+	PrecacheSound(SND_hour,true);
+	EmitSoundToAll(SND_hour);
+	}
+else /*if (HMS[2]==15 || HMS[2]==30 || HMS[2]==45 )*/ 
+	{
+	#if defined DEBUG
+	DebugPrint("Sound %s",SND_quota);
+	#endif 		
+	PrecacheSound(SND_quota,true);
+	EmitSoundToAll(SND_quota);
+	}
 PrintToChatAll("\x04На Курантах сейчас %02d:%02d",HMS[0],HMS[1]);
 #if defined DEBUG
 DebugPrint("SayTime %02d:%02d:%02d",HMS[0],HMS[1],HMS[2]);
