@@ -1,23 +1,19 @@
-#define DEBUG 1
+#define noDEBUG 1
 #define PLUGIN_VERSION "1.0"
 #include "k64t"
 
 #define FATALERROR1 "it is impossible to calculate the 1st period"
-#define PERIOD_MIN 5
+#define PERIOD_MIN 1
 #define PERIOD_MAX 60
 #define PERIOD_DEFAULT 15
 
-#define SND_hour	"k64t\\TalkingClock\\ru\\Kuranty-hour.mp3"
-#define SND_quota	"k64t\\TalkingClock\\ru\\Kuranty-quota.mp3"
-
-#tryinclude "color.inc"
-
+#define SND_hour	"k64t\\CuckooClock\\ru\\Kuranty-hour.mp3"
+#define SND_quota	"k64t\\CuckooClock\\ru\\Kuranty-quota.mp3"
 
 // ConVar
 Handle cvar_Period   = INVALID_HANDLE;
 // Global Var
 int Period;// seconds
-
 public Plugin myinfo =
 {
     name = PLUGIN_NAME,
@@ -32,7 +28,6 @@ public void OnPluginStart(){
 #if defined DEBUG
 DebugPrint("OnPluginStart");
 #endif 
-LogMessage("OnPluginStart");
 LoadTranslations("Cuckoo_clock.phrases");
 cvar_Period	= CreateConVar("Cuckoo_clock_Period","15",
 	"Number of minutes between clock talk "/*,_,true,5.0,true,60.0*/);
@@ -40,135 +35,103 @@ cvar_Period	= CreateConVar("Cuckoo_clock_Period","15",
 RegConsoleCmd("TestCuckooClock",TestCuckooClock);	
 #endif 
 char buffer[MAX_FILENAME_LENGHT];
-Format(buffer, MAX_FILENAME_LENGHT, "sound\\%s",SND_hour);	
+Format(buffer, MAX_FILENAME_LENGHT, "download\\sound\\%s",SND_hour);	
 AddFileToDownloadsTable(buffer);
 PrecacheSound(SND_hour,true);
-Format(buffer, MAX_FILENAME_LENGHT, "sound\\%s",SND_quota);	
+Format(buffer, MAX_FILENAME_LENGHT, "download\\sound\\%s",SND_quota);	
 AddFileToDownloadsTable(buffer);
 PrecacheSound(SND_quota,true);
 AutoExecConfig(true, "CuckooClock");
 #if defined DEBUG
-PrintToChatAll("CuckooClock_Period=%d",GetConVarInt(cvar_Period));
+DebugPrint("CuckooClock_Period=%d",GetConVarInt(cvar_Period));
 #endif 
-//-> не работает чтение и запись конфига
-Period=GetConVarInt(cvar_Period);
-if (Period<PERIOD_MIN || Period>PERIOD_MAX) 
-	{
-	LogError("ERROR: incorrect value period=%d. Set to default=%d ",Period,PERIOD_DEFAULT);
-	Period=PERIOD_DEFAULT;
-	}
-Period*=60;	
-#if defined DEBUG
-PrintToChatAll("Period=%d",Period);
-#endif 
-new CurentTime=GetTime();
-#if defined DEBUG
-PrintToChatAll("CurentTime=%d",CurentTime);
-#endif 
-
-new FirstPeriod;
-decl String:strtime[4];
-FormatTime(strtime,3, "%S",CurentTime);
-FirstPeriod=StringToInt(strtime);
-FormatTime(strtime,3, "%M",CurentTime);
-FirstPeriod+=StringToInt(strtime)*60;
-FormatTime(strtime,3, "%H",CurentTime);
-FirstPeriod+=StringToInt(strtime)*3600;
-#if defined DEBUG
-PrintToChatAll("Seconds from day start=%d",FirstPeriod);
-#endif 
-
-FirstPeriod=RoundToCeil(FloatDiv(float(FirstPeriod),float(Period)))*Period-FirstPeriod;
-
-#if defined DEBUG
-PrintToChatAll("1stPeriod=%d",FirstPeriod);
-#endif 
-
-if (FirstPeriod==0)
-	{
-	TalkClock(GetTime());
-	CreateTimer(float(Period),TalkPeriod,_,TIMER_REPEAT);
-	}
-if (FirstPeriod<0)
-	{
-	LogError("FATAL: %s",FATALERROR1);
-	SetFailState("[%s] %s",PLUGIN_NAME,FATALERROR1);
-	}	
-CreateTimer(float(FirstPeriod),FirstPeriodAdjustment);
-
-
 }
-#if defined DEBUG
 //***********************************************
 public void OnMapStart(){
 //***********************************************
+#if defined DEBUG
 DebugPrint("OnMapStart");
-}
 #endif 
+Period=GetConVarInt(cvar_Period);
+if (Period<PERIOD_MIN || Period>PERIOD_MAX) 
+	{
+	LogMessage("ERROR: incorrect value period=%d . Set to default=%d ",Period,PERIOD_DEFAULT);
+	Period=PERIOD_DEFAULT;
+	}
+else 
+	{	
+	int validPeriod[]={1,2,3,4,5,6,10,15,30,60};	
+	int i;
+	for (i=0;i!=sizeof(validPeriod);i++)if (validPeriod[i]==Period)break;
+	if (i==sizeof(validPeriod))
+		{
+		LogMessage("ERROR: incorrect value period=%d. Set to default=%d ",Period,PERIOD_DEFAULT);
+		Period=PERIOD_DEFAULT;
+		}
+	}
+Period*=60;	
+#if defined DEBUG
+DebugPrint("Period=%d",Period);
+#endif 
+
+int HMS[3];
+GetTimeHMS(HMS);
+#if defined DEBUG
+DebugPrint("CurentTime=%2d:%2d:%2d",HMS[0],HMS[1],HMS[2]);
+#endif 
+int curTime=HMS[1]*60+HMS[2];
+int FirstPeriod=0;
+while (FirstPeriod<=curTime)FirstPeriod+=Period;
+#if defined DEBUG
+DebugPrint("1stPeriod=%d",FirstPeriod);
+#endif 
+if (FirstPeriod==0)
+	{	
+	CreateTimer(float(Period),SayPeriod,_,TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+	SayTime();
+	}
+else 
+	{
+	CreateTimer(float(FirstPeriod-curTime),FirstPeriodAdjustment,_,TIMER_FLAG_NO_MAPCHANGE);
+	#if defined DEBUG
+	DebugPrint("FirstPeriodAdjustment=%d",FirstPeriod-curTime);
+	#endif 
+	}
+}
 //*****************************************************************************
-public  Action:FirstPeriodAdjustment (Handle:Timer,any:var){
+public  Action FirstPeriodAdjustment (Handle timer){
 //*****************************************************************************
-#if defined DEBUG`
+#if defined DEBUG
 DebugPrint("FirstPeriodAdjustment");
 #endif 
-TalkClock(GetTime());
-CreateTimer(float(Period),TalkPeriod,_,TIMER_REPEAT);
-
+CreateTimer(float(Period),SayPeriod,_,TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+SayTime();
 }
 //*****************************************************************************
-public  Action:TalkPeriod(Handle:Timer,any:var){
+public  Action SayPeriod(Handle timer){SayTime();}
 //*****************************************************************************
-TalkClock(GetTime());
+void SayTime(){
+//*****************************************************************************
+int HMS[3];
+GetTimeHMS(HMS);
+if (HMS[2]==0) {PrecacheSound(SND_hour,true);EmitSoundToAll(SND_hour);}
+else /*if (HMS[2]==15 || HMS[2]==30 || HMS[2]==45 )*/ {PrecacheSound(SND_quota,true);EmitSoundToAll(SND_quota);}
+PrintToChatAll("\x04На Курантах сейчас %02d:%02d",HMS[0],HMS[1]);
+#if defined DEBUG
+DebugPrint("SayTime %02d:%02d:%02d",HMS[0],HMS[1],HMS[2]);
+#endif 
 }
 #if defined DEBUG
 //*****************************************************************************
-public  Action:TestCuckooClock(client, args){
+public  Action TestCuckooClock(int client, int args){
 //*****************************************************************************
 DebugPrint("TestCuckooClock");
-
-new CurentTime=GetTime();
-decl String:strtime[4];
-FormatTime(strtime,3, "%S",CurentTime);
-CurentTime-=StringToInt(strtime);
-FormatTime(strtime,3, "%M",CurentTime);
-CurentTime-=StringToInt(strtime)*60;
-FormatTime(strtime,3, "%H",CurentTime);
-CurentTime-=StringToInt(strtime)*3600;
-
-new String:argstext[8];
-GetCmdArgString(argstext, sizeof(argstext));
-new String:part1[8];
-CutWord(argstext,":",1,part1,3);
-CurentTime+=StringToInt(part1)*3600;
-CutWord(argstext,":",2,part1,3);
-CurentTime+=StringToInt(part1)*60;
-
-//EmitSoundToAll(SND_quota);
-TalkClock(CurentTime);
+SayTime();
 return Plugin_Handled;
 }
 #endif 
+#endinput
 
-//*****************************************************************************
-TalkClock(time){
-//*****************************************************************************
-#if defined DEBUG
-DebugPrint("TalkClock");
-#endif 
-
-
-decl String:strtime[6];
-FormatTime(strtime, 3, "%M",time);
-{
-new m = StringToInt(strtime);
-if (m==0) {PrecacheSound(SND_hour,true);EmitSoundToAll(SND_hour);}
-else if (m==15 || m==30 || m==45 ) {PrecacheSound(SND_quota,true);EmitSoundToAll(SND_quota);}
-}
-FormatTime(strtime, 6, "%H:%M",time);
-
-CPrintToChatAll("{red}На Курантах сейчас %s",strtime);
-//SendDialogToAll({200,200,200},"На Курантах сейчас %s",strtime);
-}
 /*//*****************************************************************************
 SendDialogToAll(color[3], String:text[], any:...){
 //*****************************************************************************
@@ -190,7 +153,7 @@ for(new i = 1; i <= MaxClients; i++)
 CloseHandle(kv);	
 }
 */
-#endinput
+
 /*	=============================================
 *	- NAME:
 *	  + FF HUD Clock
