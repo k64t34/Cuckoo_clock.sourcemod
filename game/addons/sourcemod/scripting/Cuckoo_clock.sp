@@ -1,5 +1,5 @@
-#define NoDEBUG 1
-#define PLUGIN_VERSION "1.1"
+#define noDEBUG 1
+#define PLUGIN_VERSION "1.3"
 #include "k64t"
 
 #define FATALERROR1 "it is impossible to calculate the 1st period"
@@ -35,10 +35,10 @@ cvar_Period	= CreateConVar("Cuckoo_clock_Period","15",
 RegConsoleCmd("TestCuckooClock",TestCuckooClock);	
 #endif 
 char buffer[MAX_FILENAME_LENGHT];
-Format(buffer, MAX_FILENAME_LENGHT, "download\\sound\\%s",SND_hour);	
+Format(buffer, MAX_FILENAME_LENGHT, /*"download\\*/"sound\\%s",SND_hour);	
 AddFileToDownloadsTable(buffer);
 PrecacheSound(SND_hour,true);
-Format(buffer, MAX_FILENAME_LENGHT, "download\\sound\\%s",SND_quota);	
+Format(buffer, MAX_FILENAME_LENGHT, /*"download\\*/"sound\\%s",SND_quota);	
 AddFileToDownloadsTable(buffer);
 PrecacheSound(SND_quota,true);
 AutoExecConfig(true, "CuckooClock");
